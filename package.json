@@ -1,0 +1,14 @@
+{
+    "name": "aivisspeech-sillytavern",
+    "version": "1.0.0",
+    "description": "AivisSpeech adapter for SillyTavern",
+    "scripts": {
+        "build": "tsc"
+    },
+    "license": "AGPL-3.0",
+    "devDependencies": {
+        "@types/jquery": "^3.5.32",
+        "@types/toastr": "^2.1.43",
+        "typescript": "^5.9.2"
+    }
+}

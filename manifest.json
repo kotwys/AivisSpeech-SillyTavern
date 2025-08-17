@@ -1,0 +1,7 @@
+{
+    "display_name": "AivisSpeech",
+    "js": "dist/index.js",
+    "author": "kotwys",
+    "auto_update": false,
+    "dependencies": ["tts"]
+}
