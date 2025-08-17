@@ -1,11 +1,18 @@
-// @ts-ignore
 import {
     registerTtsProvider,
     saveTtsProviderSettings
 } from '../../../tts/index.js';
+import { AivisSpeechApi } from './api.js';
 
 // TODO: make a number
-type VoiceId = string;
+type VoiceId = number;
+
+interface STVoice {
+    name: string,
+    voice_id: VoiceId,
+    preview_url?: string,
+    lang?: string,
+}
 
 interface AivisSpeechSettings {
     baseUrl: string,
@@ -19,7 +26,8 @@ class AivisSpeechTtsProvider {
     settings: AivisSpeechSettings = null;
     readonly separator = '。';
 
-    private voices = [];
+    private api: AivisSpeechApi;
+    private voices: Array<STVoice> = [];
 
     get settingsHtml() {
         return `
@@ -34,50 +42,38 @@ class AivisSpeechTtsProvider {
     onSettingsChange() {
         console.log('settings changed');
         this.settings.baseUrl = $('#aivis_base_url').val() as string;
+        this.api.setEndpoint(this.settings.baseUrl);
         saveTtsProviderSettings();
     }
 
     async loadSettings(settings: AivisSpeechSettings) {
         this.settings = { ...DEFAULT_SETTINGS, ...settings };
+        this.api = new AivisSpeechApi(this.settings.baseUrl);
 
-        console.log('load settings', settings);
         $('#aivis_base_url').val(this.settings.baseUrl);
         $('#aivis_base_url').on('input', () => this.onSettingsChange());
-
-        this.voices = [];
-        try {
-            const res = await fetch(`${this.settings.baseUrl}/speakers`);
-            const speakers = await res.json();
-
-            for (const speaker of speakers) {
-                for (const style of speaker.styles) {
-                    const name = `${speaker.name}（${style.name}）`;
-                    const id = style.id.toString();
-
-                    this.voices.push({
-                        voice_id: id,
-                        name,
-                        lang: 'ja-JP',
-                        preview_url: null,
-                    });
-                }
-            }
-        } catch (err) {
-            console.error('[AivisSpeech] スピーカー取得失敗:', err);
-            toastr.error('話者リストの取得に失敗しました');
-        }
     }
 
     async checkReady() {
-        const res = await fetch(`${this.settings.baseUrl}/speakers`);
-        if (!res.ok) throw new Error('AivisSpeech に接続できません');
+        await this.api.getVersion();
     }
 
     async onRefreshClick() {
         return;
     }
 
-    async fetchTtsVoiceObjects() {
+    async fetchTtsVoiceObjects(): Promise<Array<STVoice>> {
+        this.voices = [];
+        for (const speaker of await this.api.getSpeakers()) {
+            for (const style of speaker.styles) {
+                const name = `${speaker.name}（${style.name}）`;
+                this.voices.push({
+                    voice_id: style.id,
+                    name,
+                    lang: 'ja-JP',
+                });
+            }
+        }
         return this.voices;
     }
 
@@ -91,30 +87,8 @@ class AivisSpeechTtsProvider {
         return match;
     }
 
-    async generateTts(text: string, voiceId: VoiceId) {
-        const speaker = parseInt(voiceId);
-
-        try {
-            const queryRes = await fetch(`${this.settings.baseUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${speaker}`, {
-                method: 'POST'
-            });
-            const query = await queryRes.json();
-
-            const synthRes = await fetch(`${this.settings.baseUrl}/synthesis?speaker=${speaker}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(query)
-            });
-
-            if (!synthRes.ok) {
-                throw new Error(`音声合成に失敗しました: ${synthRes.statusText}`);
-            }
-
-            return synthRes;
-        } catch (err) {
-            console.error('[AivisSpeech] 音声生成中のエラー:', err);
-            throw err;
-        }
+    async generateTts(text: string, voiceId: VoiceId): Promise<Response> {
+        return this.api.textToSpeech(text, voiceId);
     }
 
     async previewTtsVoice(voiceId: VoiceId) {
