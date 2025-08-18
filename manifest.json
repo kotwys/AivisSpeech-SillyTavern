@@ -1,7 +1,12 @@
 {
-    "display_name": "AivisSpeech",
+    "display_name": "AivisSpeech Integration",
     "js": "dist/index.js",
     "author": "kotwys",
+    "version": "1.0.0",
+    "homePage": "https://github.com/kotwys/AivisSpeech-SillyTavern",
     "auto_update": false,
-    "dependencies": ["tts"]
+    "dependencies": ["tts"],
+    "i18n": {
+        "ja-jp": "i18n/ja-jp.json"
+    }
 }

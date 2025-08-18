@@ -1,3 +1,4 @@
+const { t } = window.SillyTavern.getContext();
 /**
  * Access to the AivisSpeech API
  */
@@ -30,7 +31,7 @@ export class AivisSpeechApi {
         }
         const res = await fetch(url, opts);
         if (!res.ok) {
-            throw new Error(`Request to AivisSpeech failed: ${res.statusText}`);
+            throw new Error(t `Request to AivisSpeech failed: ${res.statusText}`);
         }
         return res;
     }

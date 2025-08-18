@@ -1,6 +1,7 @@
 import { registerTtsProvider, saveTtsProviderSettings } from '../../../tts/index.js';
 import { AivisSpeechApi } from './api.js';
 import { CHUNK_SEP, chunkText } from './chunk.js';
+const { t } = window.SillyTavern.getContext();
 const DEFAULT_SETTINGS = {
     baseUrl: 'http://127.0.0.1:10101',
     chunkSize: 500,
@@ -15,13 +16,16 @@ class AivisSpeechTtsProvider {
     get settingsHtml() {
         return `
             <div>
-                <label for="aivis_base_url">AivisSpeech Endpoint:</label>
+                <label for="aivis_base_url" data-i18n="AivisSpeech API URL:">
+                    AivisSpeech API URL:
+                </label>
                 <input id="aivis_base_url" class="text_pole"
                        type="text"
                        value="${DEFAULT_SETTINGS.baseUrl}">
             </div>
             <div class="range-block">
-                <div class="range-block-title justifyLeft">
+                <div class="range-block-title justifyLeft"
+                     data-i18n="Chunk size (characters)">
                        Chunk size (characters)
                 </div>
                 <div class="range-block-range-and-counter">
@@ -39,18 +43,18 @@ class AivisSpeechTtsProvider {
                 </div>
             </div>
             <label class="checkbox_label" for="aivis_extract_quotes"
+                   data-i18n="[title]Only Japanese single quotes (「」) are considered"
                    title="Only Japanese single quotes (「」) are considered">
                 <input id="aivis_extract_quotes" type="checkbox">
-                Extract quotes longer than
+                <span data-i18n="Extract quotes not shorter than">Extract quotes not shorter than</span>
                 <input id="aivis_extract_quotes_threshold" type="number"
                        class="text_pole textarea_compact widthUnset"
                        value="${DEFAULT_SETTINGS.quoteLengthThreshold}"
                        min="0" max="100" step="1">
-                characters
+                <span data-i18n="characters">characters</span>
             </label>`;
     }
     onSettingsChange() {
-        console.log('settings changed');
         this.settings.baseUrl = $('#aivis_base_url').val();
         this.api.setEndpoint(this.settings.baseUrl);
         this.settings.chunkSize = $('#aivis_chunk_size').val();
@@ -125,7 +129,7 @@ class AivisSpeechTtsProvider {
         const info = await this.api.getSpeakerInfo(voice.speakerUuid);
         const style = info.style_infos.find(v => v.id == voiceId);
         if (!style.voice_samples) {
-            toastr.info('このボイスにはプレビュー音声が設定されていません。');
+            toastr.info(t `This style has no provided voice samples.`);
             return;
         }
         const idx = Math.floor(Math.random() * style.voice_samples.length);
