@@ -70,4 +70,17 @@ export class AivisSpeechApi {
             speaker: speaker.toString(),
         }, query);
     }
+    /**
+     * Generate speech from given text
+     *
+     * This is a convenience function that combines `makeAudioQuery` and
+     * `synthesize`.
+     *
+     * @param text text to pronounce
+     * @param speaker numerical ID of the speaker style
+     */
+    async textToSpeech(text, speaker) {
+        const query = await this.makeAudioQuery(text, speaker);
+        return await this.synthesize(query, speaker);
+    }
 }

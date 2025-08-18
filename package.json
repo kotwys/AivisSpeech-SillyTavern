@@ -1,5 +1,6 @@
 {
     "name": "aivisspeech-sillytavern",
+    "type": "module",
     "version": "1.0.0",
     "description": "AivisSpeech adapter for SillyTavern",
     "scripts": {
