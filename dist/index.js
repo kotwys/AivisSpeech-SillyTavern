@@ -5,7 +5,7 @@ const DEFAULT_SETTINGS = {
     baseUrl: 'http://127.0.0.1:10101',
     chunkSize: 500,
     extractQuotes: true,
-    quoteLengthThreshold: 7,
+    quoteLengthThreshold: 10,
 };
 class AivisSpeechTtsProvider {
     settings;
@@ -96,6 +96,7 @@ class AivisSpeechTtsProvider {
                     voice_id: style.id,
                     name,
                     lang: 'ja-JP',
+                    speakerUuid: speaker.speaker_uuid,
                 });
             }
         }
@@ -120,7 +121,22 @@ class AivisSpeechTtsProvider {
         }
     }
     async previewTtsVoice(voiceId) {
-        toastr.info('このボイスにはプレビュー音声が設定されていません。');
+        const voice = this.voices.find(v => v.voice_id == voiceId);
+        const info = await this.api.getSpeakerInfo(voice.speakerUuid);
+        const style = info.style_infos.find(v => v.id == voiceId);
+        if (!style.voice_samples) {
+            toastr.info('このボイスにはプレビュー音声が設定されていません。');
+            return;
+        }
+        const idx = Math.floor(Math.random() * style.voice_samples.length);
+        const base64 = style.voice_samples[idx];
+        const url = `data:audio/wav;base64,${base64}`;
+        return new Promise((resolve) => {
+            const audio = new Audio();
+            audio.src = url;
+            audio.play();
+            audio.onended = () => resolve();
+        });
     }
 }
 registerTtsProvider('AivisSpeech', AivisSpeechTtsProvider);

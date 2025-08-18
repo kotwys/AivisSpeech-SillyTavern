@@ -46,6 +46,12 @@ export class AivisSpeechApi {
     async getSpeakers() {
         return (await this.baseFetch('/speakers')).json();
     }
+    async getSpeakerInfo(uuid) {
+        return (await this.baseFetch('/speaker_info', 'get', {
+            speaker_uuid: uuid,
+            resource_format: 'base64'
+        })).json();
+    }
     /**
      * Get the initial value for the voice synthesis query
      * @param text text to pronounce

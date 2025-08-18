@@ -10,6 +10,19 @@ export interface Speaker {
     styles: Array<Style>,
 }
 
+export interface StyleInfo {
+    id: number,
+    icon: string,
+    voice_samples: Array<string>,
+    voice_sample_transcripts: Array<string>,
+}
+
+export interface SpeakerInfo {
+    policy: string,
+    portrait: string,
+    style_infos: Array<StyleInfo>,
+}
+
 /**
  * Access to the AivisSpeech API
  */
@@ -63,6 +76,13 @@ export class AivisSpeechApi {
      */
     async getSpeakers(): Promise<Array<Speaker>> {
         return (await this.baseFetch('/speakers')).json();
+    }
+
+    async getSpeakerInfo(uuid: string): Promise<SpeakerInfo> {
+        return (await this.baseFetch('/speaker_info', 'get', {
+            speaker_uuid: uuid,
+            resource_format: 'base64'
+        })).json()
     }
 
     /**

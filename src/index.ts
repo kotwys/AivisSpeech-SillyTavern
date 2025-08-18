@@ -13,6 +13,7 @@ interface STVoice {
     voice_id: VoiceId,
     preview_url?: string,
     lang?: string,
+    speakerUuid: string,
 }
 
 interface AivisSpeechSettings {
@@ -131,6 +132,7 @@ class AivisSpeechTtsProvider {
                     voice_id: style.id,
                     name,
                     lang: 'ja-JP',
+                    speakerUuid: speaker.speaker_uuid,
                 });
             }
         }
@@ -159,8 +161,24 @@ class AivisSpeechTtsProvider {
         }
     }
 
-    async previewTtsVoice(voiceId: VoiceId) {
-        toastr.info('このボイスにはプレビュー音声が設定されていません。');
+    async previewTtsVoice(voiceId: VoiceId): Promise<void> {
+        const voice = this.voices.find(v => v.voice_id == voiceId)!;
+        const info = await this.api.getSpeakerInfo(voice.speakerUuid);
+        const style = info.style_infos.find(v => v.id == voiceId)!;
+        if (!style.voice_samples) {
+            toastr.info('このボイスにはプレビュー音声が設定されていません。');
+            return;
+        }
+
+        const idx = Math.floor(Math.random()*style.voice_samples.length);
+        const base64 = style.voice_samples[idx];
+        const url = `data:audio/wav;base64,${base64}`;
+        return new Promise((resolve) => {
+            const audio = new Audio();
+            audio.src = url;
+            audio.play();
+            audio.onended = () => resolve();
+        });
     }
 }
 
