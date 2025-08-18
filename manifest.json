@@ -1,7 +1,7 @@
 {
     "display_name": "AivisSpeech Integration",
     "js": "dist/index.js",
-    "author": "kotwys",
+    "author": "kotwys, VPN Taizen",
     "version": "1.0.0",
     "homePage": "https://github.com/kotwys/AivisSpeech-SillyTavern",
     "auto_update": false,
