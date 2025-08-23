@@ -35,7 +35,7 @@ To use AivisSpeech as a TTS engine, go to **Extensions** > **TTS** and select
     The base URL for the AivisSpeech HTTP API (if the desktop application or the
     server is running on the current device, this will be
     `http://127.0.0.1:10101` by default).
-    
+
 1. **Chunk size**
 
     The text is split into chunks before being given to the TTS engine.  The
@@ -54,13 +54,23 @@ To use AivisSpeech as a TTS engine, go to **Extensions** > **TTS** and select
     quoted phrase will be extracted.  Only Japanese single corner brackets
     (「these ones」) are examined when searching for quotes.
     
-As per the AivisSpeech documentation, the expression and intonation of voice is
-decided for the whole text fragment given at once.  Depending on the type of the
-conversation you are having and its textual representation, you might want to
-tweak these settings (specifically, to generate more chunks).  Also, applying
-more “aggressive” chunking strategy allows to reduce the response time from the
-TTS engine (while one voice fragment is playing, the next one can be generated
-in the background).
+1. **Defer playback until every chunk is processed**
+
+    By default, chunks are played back as soon as they are processed by the
+    engine.  If you turn this setting on, the playback will be deferred until
+    every chunk of the message is processed.
+
+> [!NOTE]
+> As per the AivisSpeech documentation, the expression and intonation of voice
+> is decided for the whole text fragment given at once.  Depending on the type
+> of the conversation you are having and its textual representation, you might
+> want to tweak these settings (specifically, to generate more chunks).
+>
+> Also, applying more “aggressive” chunking strategy allows to reduce the
+> response time from the TTS engine in some cases (while one voice fragment is
+> playing, the next one can be generated in the background).  Yet, there is also
+> a chance that you will hear large pauses between chunks if your machine is
+> unable to generate audio as fast as needed.
 
 <hr id="nihongo">
 
@@ -111,11 +121,21 @@ Provider として「AivisSpeech」を選択してください。必要に応じ
     ロックとして抽出します。_N=0_ に設定した場合、すべての引用文が抽出されます。
     引用符の検出には日本語のかぎかっこ（「〜」）のみが使用されます。
 
-AivisSpeech のドキュメントによれば、音声の表情や抑揚は一度に渡された文章全体に基
-づいて決定されます。会話の種類やテキストの形式によっては、設定を調整し（特にブロッ
-ク数を増やすことで）より自然な出力が得らる場合があります。また、分割戦略をより
-「積極的」に行うことで、音声合成エンジンの応答時間を短縮できます。（ある音声ブロッ
-クを再生中に、次のフラグメントをバックグラウンドで生成できるため）
+1. **全てのブロックが処理されるまで再生を遅延**
+
+    デフォルトでは、ブロックはエンジンによって処理され次第、すぐに再生されます。
+    この設定を有効にすると、メッセージの全てのブロックが処理されるまで再生が延
+    期されます。
+
+> [!NOTE]
+> AivisSpeech のドキュメントによれば、音声の表情や抑揚は一度に渡された文章全体に
+> 基づいて決定されます。会話の種類やテキストの形式によっては、設定を調整し（特に
+> ブロック数を増やすことで）より自然な出力が得らる場合があります。
+>
+> また、分割戦略をより「積極的」に行うことで、音声合成エンジンの応答時間を短縮で
+> きます。（ある音声ブロックを再生中に、次のブロックをバックグラウンドで生成でき
+> るため）。しかし、ご利用のマシンが必要な速度で音声を作成できない場合、ブロック
+> の間に大きなポーズが挟まれる可能性があります。
 
 こちらは日本語が母語ではないので、もしこのドキュメントや UI に言語の問題がありま
 したら、ぜひご指摘ください。

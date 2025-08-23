@@ -7,8 +7,29 @@ import { CHUNK_SEP, chunkText } from './chunk.js';
 
 const { t } = (window as any).SillyTavern.getContext();
 
-// TODO: make a number
 type VoiceId = number;
+
+type GenerationStrategy<I = string, O = Response> = (
+    input: Array<I>,
+    f: (chunk: I) => Promise<O>,
+) => AsyncGenerator<O>;
+
+type StrategyName = 'eager' | 'deferred';
+
+const generationStrategies: Record<StrategyName, GenerationStrategy> = {
+    eager: async function* (input, f) {
+        for (const chunk of input) {
+            yield f(chunk);
+        }
+    },
+    deferred: async function* (input, f) {
+        const results: Array<Response> = [];
+        for (const chunk of input) {
+            results.push(await f(chunk));
+        }
+        yield* results;
+    },
+}
 
 interface STVoice {
     name: string,
@@ -23,6 +44,7 @@ interface AivisSpeechSettings {
     chunkSize: number,
     extractQuotes: boolean,
     quoteLengthThreshold: number,
+    strategy: StrategyName,
 }
 
 const DEFAULT_SETTINGS: AivisSpeechSettings = {
@@ -30,6 +52,7 @@ const DEFAULT_SETTINGS: AivisSpeechSettings = {
     chunkSize: 500,
     extractQuotes: true,
     quoteLengthThreshold: 10,
+    strategy: 'eager',
 };
 
 class AivisSpeechTtsProvider {
@@ -78,6 +101,12 @@ class AivisSpeechTtsProvider {
                        value="${DEFAULT_SETTINGS.quoteLengthThreshold}"
                        min="0" max="100" step="1">
                 <span data-i18n="characters">characters</span>
+            </label>
+            <label class="checkbox_label" for="aivis_generate_defer">
+                <input id="aivis_generate_defer" type="checkbox">
+                <span data-i18n="Defer playback until every chunk is processed">
+                    Defer playback until every chunk is processed
+                </span>
             </label>`;
     }
 
@@ -88,6 +117,9 @@ class AivisSpeechTtsProvider {
         this.settings.extractQuotes = $('#aivis_extract_quotes').is(':checked');
         this.settings.quoteLengthThreshold =
             $('#aivis_extract_quotes_threshold').val() as number;
+        this.settings.strategy = $('#aivis_generate_defer').is(':checked')
+            ? 'deferred'
+            : 'eager';
         saveTtsProviderSettings();
     }
 
@@ -118,6 +150,10 @@ class AivisSpeechTtsProvider {
             .prop('disabled', !this.settings.extractQuotes)
             .val(this.settings.quoteLengthThreshold)
             .on('input', () => this.onSettingsChange());
+
+        $('#aivis_generate_defer')
+            .prop('checked', this.settings.strategy === 'deferred')
+            .on('change', () => this.onSettingsChange());
     }
 
     async checkReady() {
@@ -154,16 +190,18 @@ class AivisSpeechTtsProvider {
         return match;
     }
 
-    async *generateTts(text: string, voiceId: VoiceId): AsyncGenerator<Response> {
+    async *generateTts(text: string, voiceId: VoiceId) {
         const chunks = chunkText(text, {
             chunkSize: this.settings.chunkSize,
             extractQuotes: this.settings.extractQuotes
                 ? this.settings.quoteLengthThreshold
                 : null,
         });
-        for (const chunk of chunks) {
-            yield this.api.textToSpeech(chunk, voiceId);
-        }
+        const strategy = generationStrategies[this.settings.strategy];
+        yield* strategy(
+            chunks,
+            (chunk) => this.api.textToSpeech(chunk, voiceId)
+        );
     }
 
     async previewTtsVoice(voiceId: VoiceId): Promise<void> {
