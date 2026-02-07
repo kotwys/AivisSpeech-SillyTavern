@@ -4,6 +4,7 @@ import {
 } from '../../../tts/index.js';
 import { AivisSpeechApi } from './api.js';
 import { CHUNK_SEP, chunkText } from './chunk.js';
+import { Preprocessor } from './preprocessor.js';
 
 const { t } = (window as any).SillyTavern.getContext();
 
@@ -61,6 +62,8 @@ class AivisSpeechTtsProvider {
 
     private api: AivisSpeechApi;
     private voices: Array<STVoice> = [];
+    private preproc: Preprocessor | null = null;
+    private loadingPreproc = true;
 
     get settingsHtml() {
         return `
@@ -127,6 +130,15 @@ class AivisSpeechTtsProvider {
         this.settings = { ...DEFAULT_SETTINGS, ...settings };
         this.api = new AivisSpeechApi(this.settings.baseUrl);
 
+        if (this.loadingPreproc) {
+            const wasmUrl = new URL(
+                '../preprocessor/kanajomyton.wasm',
+                import.meta.url
+            ).href;
+            Preprocessor.fromWasmUrl(wasmUrl).then(p => this.preproc = p);
+            this.loadingPreproc = false;
+        }
+
         $('#aivis_base_url').val(this.settings.baseUrl);
         $('#aivis_base_url').on('input', () => this.onSettingsChange());
 
@@ -191,12 +203,15 @@ class AivisSpeechTtsProvider {
     }
 
     async *generateTts(text: string, voiceId: VoiceId) {
+        const preprocess = this.preproc
+            ? (s: string) => this.preproc!.preprocess(s)
+            : (s: string) => s;
         const chunks = chunkText(text, {
             chunkSize: this.settings.chunkSize,
             extractQuotes: this.settings.extractQuotes
                 ? this.settings.quoteLengthThreshold
                 : null,
-        });
+        }).map(preprocess);
         const strategy = generationStrategies[this.settings.strategy];
         yield* strategy(
             chunks,
