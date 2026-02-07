@@ -6,7 +6,9 @@ import { AivisSpeechApi } from './api.js';
 import { CHUNK_SEP, chunkText } from './chunk.js';
 import { Preprocessor } from './preprocessor.js';
 
-const { t } = (window as any).SillyTavern.getContext();
+const ST = (window as any).SillyTavern;
+const { t } = ST.getContext();
+const { lodash } = ST.libs;
 
 type VoiceId = number;
 
@@ -46,6 +48,8 @@ interface AivisSpeechSettings {
     extractQuotes: boolean,
     quoteLengthThreshold: number,
     strategy: StrategyName,
+    preprocessorEnabled: boolean,
+    preprocessorModule: string,
 }
 
 const DEFAULT_SETTINGS: AivisSpeechSettings = {
@@ -54,6 +58,8 @@ const DEFAULT_SETTINGS: AivisSpeechSettings = {
     extractQuotes: true,
     quoteLengthThreshold: 10,
     strategy: 'eager',
+    preprocessorEnabled: false,
+    preprocessorModule: '',
 };
 
 class AivisSpeechTtsProvider {
@@ -63,7 +69,14 @@ class AivisSpeechTtsProvider {
     private api: AivisSpeechApi;
     private voices: Array<STVoice> = [];
     private preproc: Preprocessor | null = null;
-    private loadingPreproc = true;
+
+    private preprocModuleLoaded: string | null = null;
+    private preprocLoading = false;
+    private preprocReloadPending = false;
+    private debouncedPreprocLoad = lodash.debounce(
+        () => this.ensurePreprocessorLoaded(),
+        500,
+    );
 
     get settingsHtml() {
         return `
@@ -110,6 +123,13 @@ class AivisSpeechTtsProvider {
                 <span data-i18n="Defer playback until every chunk is processed">
                     Defer playback until every chunk is processed
                 </span>
+            </label>
+            <label class="checkbox_label" for="aivis_preprocessor_enable">
+                <input id="aivis_preprocessor_enable" type="checkbox">
+                <span data-i18n="Preprocessor">Preprocessor</span>
+                <input id="aivis_preprocessor_module" type="text"
+                       class="text_pole textarea_compact widthUnset"
+                       value="${DEFAULT_SETTINGS.preprocessorModule}">
             </label>`;
     }
 
@@ -126,18 +146,69 @@ class AivisSpeechTtsProvider {
         saveTtsProviderSettings();
     }
 
+    onPreprocessorSettingsChange() {
+        this.settings.preprocessorEnabled =
+            $('#aivis_preprocessor_enable').is(':checked');
+        this.settings.preprocessorModule =
+            $('#aivis_preprocessor_module').val() as string;
+        $('#aivis_preprocessor_module').prop(
+            'disabled',
+            !this.settings.preprocessorEnabled
+        );
+        saveTtsProviderSettings();
+        this.debouncedPreprocLoad?.();
+    }
+
+    async ensurePreprocessorLoaded() {
+        if (!this.settings.preprocessorEnabled) {
+            this.preproc = null;
+            this.preprocModuleLoaded = null;
+            return;
+        }
+
+        const moduleName = (this.settings.preprocessorModule || '').trim();
+        if (!moduleName) {
+            this.preproc = null;
+            this.preprocModuleLoaded = null;
+            return;
+        }
+
+        if (this.preproc && this.preprocModuleLoaded === moduleName) {
+            return;
+        }
+
+        if (this.preprocLoading) {
+            this.preprocReloadPending = true;
+            return;
+        }
+
+        this.preprocLoading = true;
+        try {
+            const wasmUrl = new URL(
+                `../preprocessor/${moduleName}.wasm`,
+                import.meta.url
+            ).href;
+            this.preproc = await Preprocessor.fromWasmUrl(wasmUrl);
+            this.preprocModuleLoaded = moduleName;
+        } catch (err) {
+            console.error('[AivisSpeech] Failed to load preprocessor', err);
+            toastr.error(
+                t`Failed to load preprocessor module: ${moduleName + '.wasm'}`
+            );
+            this.preproc = null;
+            this.preprocModuleLoaded = null;
+        } finally {
+            this.preprocLoading = false;
+            if (this.preprocReloadPending) {
+                this.preprocReloadPending = false;
+                void this.ensurePreprocessorLoaded();
+            }
+        }
+    }
+
     async loadSettings(settings: AivisSpeechSettings) {
         this.settings = { ...DEFAULT_SETTINGS, ...settings };
         this.api = new AivisSpeechApi(this.settings.baseUrl);
-
-        if (this.loadingPreproc) {
-            const wasmUrl = new URL(
-                '../preprocessor/kanajomyton.wasm',
-                import.meta.url
-            ).href;
-            Preprocessor.fromWasmUrl(wasmUrl).then(p => this.preproc = p);
-            this.loadingPreproc = false;
-        }
 
         $('#aivis_base_url').val(this.settings.baseUrl);
         $('#aivis_base_url').on('input', () => this.onSettingsChange());
@@ -166,6 +237,16 @@ class AivisSpeechTtsProvider {
         $('#aivis_generate_defer')
             .prop('checked', this.settings.strategy === 'deferred')
             .on('change', () => this.onSettingsChange());
+
+        $('#aivis_preprocessor_enable')
+            .prop('checked', this.settings.preprocessorEnabled)
+            .on('change', () => this.onPreprocessorSettingsChange());
+        $('#aivis_preprocessor_module')
+            .prop('disabled', !this.settings.preprocessorEnabled)
+            .val(this.settings.preprocessorModule)
+            .on('input', () => this.onPreprocessorSettingsChange());
+
+        await this.ensurePreprocessorLoaded();
     }
 
     async checkReady() {
