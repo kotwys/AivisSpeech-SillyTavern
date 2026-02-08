@@ -6,5 +6,7 @@
     "characters": "文字以上のものを抽出",
     "This style has no provided voice samples.": "このスタイルはボイスサンプルが提供されていません。",
     "Request to AivisSpeech failed: ${0}": "AivisSpeech へのリクエストに失敗しました: ${0}",
-    "Defer playback until every chunk is processed": "全てのブロックが処理されるまで再生を延期"
+    "Defer playback until every chunk is processed": "全てのブロックが処理されるまで再生を延期",
+    "Preprocessor": "前処理",
+    "Failed to load preprocessor module: ${0}": "前処理モジュールの読み込みに失敗しました: ${0}"
 }

@@ -60,6 +60,18 @@ To use AivisSpeech as a TTS engine, go to **Extensions** > **TTS** and select
     engine.  If you turn this setting on, the playback will be deferred until
     every chunk of the message is processed.
 
+1. **Preprocessor**
+
+    Enables a WebAssembly preprocessor that runs on each chunk before it is
+    sent to AivisSpeech.  This can be used to add custom text normalization,
+    including making it easier to synthesize languages other than Japanese or
+    English.
+
+    The preprocessor module must be placed in the `preprocessor/`
+    folder and should implement the functions defined in
+    [`src/preprocessor.ts`][preprocessor]. As a reference implementation, see
+    [kotwys/kanajomyton][kanajomyton] (Udmurt language support).
+
 > [!NOTE]
 > As per the AivisSpeech documentation, the expression and intonation of voice
 > is decided for the whole text fragment given at once.  Depending on the type
@@ -127,6 +139,17 @@ Provider として「AivisSpeech」を選択してください。必要に応じ
     この設定を有効にすると、メッセージの全てのブロックが処理されるまで再生が延
     期されます。
 
+1. **前処理**
+
+    ブロックごとに WebAssembly の前処理を実行してから AivisSpeech に渡します。
+    カスタムなテキスト正規化を追加できるので、日本語や英語以外の言語で音声合成
+    しやすくする用途にも使えます。
+
+    前処理モジュールは `preprocessor/` フォルダーに配置し、
+    [`src/preprocessor.ts`][preprocessor] に定義されている関数を実装する
+    必要があります。インターフェースに沿った実装例として、
+    [kotwys/kanajomyton][kanajomyton] （ウドムルト語対応）も参考になります。
+
 > [!NOTE]
 > AivisSpeech のドキュメントによれば、音声の表情や抑揚は一度に渡された文章全体に
 > 基づいて決定されます。会話の種類やテキストの形式によっては、設定を調整し（特に
@@ -143,3 +166,5 @@ Provider として「AivisSpeech」を選択してください。必要に応じ
 [aivis-speech]: https://aivis-project.com/
 [aivis-server]: https://github.com/Aivis-Project/AivisSpeech-Engine
 [vpn-taizen]: https://vpn-taizen.com/how_to_use_aivisspeech_sillytavern/
+[preprocessor]: ./src/preprocessor.ts
+[kanajomyton]: https://github.com/kotwys/kanajomyton
